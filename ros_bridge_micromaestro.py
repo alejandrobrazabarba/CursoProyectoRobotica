@@ -18,9 +18,11 @@ class RosBridgeMicromaestro:
         self.LEFT_SERVO = 4
         self.RIGHT_SERVO = 5
         self.SHARP_SENSOR = 0
-        self.SHARP_CLB_A = 0
-        self.SHARP_CLB_B = 0
-        self.SHARP_CLB_C = 0
+        # Parameters obtained from a least-square fitting using Matlab
+        # from pairs of values (distance , reading)
+        self.SHARP_P1 = 24520
+        self.SHARP_Q1 = 4773
+        self.SHARP_Q2 = 1391
         self.period = 0.125
         self.vel_rot_desired = 0
         self.vel_trans_desired = 0
@@ -33,7 +35,7 @@ class RosBridgeMicromaestro:
         self.speed_cmd_received_flag = False
         self.periods_without_speed_cmd = 0
         # Number of periods we are going to wait before motors stop when
-        # no speed cmd is recieved
+        # no speed cmd is received
         self.SAFE_STOP_WAITING_THRESHOLD = 1
 
     def stop_motors(self):
@@ -68,16 +70,15 @@ class RosBridgeMicromaestro:
         while not rospy.is_shutdown():
             output = self.maestroController.getPosition(self.SHARP_SENSOR)
             # publish distance in cm using conversion from ADC reading to cm
-            # with parameters obtained by calibration
-            # distance = SHARP_CAL_A / (output-SHARP_CLB_B)-SHARP_CLB_C
+            distance = self.SHARP_P1 / (output**2 + self.SHARP_Q1*output + self.SHARP_Q2)
             # publish raw ADC reading from sensor
-            distance = output
+            # distance = output
             sharp_pub.publish(distance)
 
             # Check if we are not receiving speed commands, so we need to stop the motors
             if not self.speed_cmd_received_flag:
                 self.periods_without_speed_cmd += 1
-                if self.periods_without_speed_cmd==1:
+                if self.periods_without_speed_cmd == 1:
                     self.stop_motors()
             else:
                 self.speed_cmd_received_flag = False
