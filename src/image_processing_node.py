@@ -6,6 +6,7 @@ from picamera import PiCamera
 import numpy
 import cv2
 import time
+# from datetime import datetime
 
 # ROS specific imports
 import rospy
@@ -19,12 +20,12 @@ class ImageProcessing:
         # Initialize node
         rospy.init_node('image_processing', anonymous=False)
         self.bridge = CvBridge()
-        self.image_pub = rospy.Publisher("processed_image", Image)
+        self.image_pub = rospy.Publisher("processed_image", Image, queue_size=2)
         # Initialize the camera and grab a reference to the raw camera capture
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
-        self.camera.framerate = 4
-        self.rawCapture = PiRGBArray(camera, size=(640, 480))
+        self.camera.framerate = 2
+        self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
 
         # Allow the camera to warmup
         time.sleep(0.1)
@@ -46,8 +47,12 @@ class ImageProcessing:
         self.RED = (0, 0, 255)
 
     def main(self):
-        for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-
+        # previous_time = datetime.now()
+        for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
+            # current_time = datetime.now()
+            # elapsed_time = current_time - previous_time
+            # previous_time = current_time
+            # print "Elapsed time: ", elapsed_time
             image = frame.array
             # Our operations on the frame come here
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -58,13 +63,16 @@ class ImageProcessing:
                 avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
                                        self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                 # Select color for rectangle depending on pixel intensity
-                reg_rect_color = RED if avg_int < self.intensity_threshold else GREEN
+                reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
                 # Draw rectangle
                 cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
                                      (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
 
-                self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
-                rawCapture.truncate(0)
+            # print "Publishing image"
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+            self.rawCapture.truncate(0)
+            if rospy.is_shutdown():
+		break
 
 
 if __name__ == '__main__':
