@@ -24,7 +24,7 @@ class RosBridgeMicromaestro:
         self.SHARP_P1 = 1352000.0
         self.SHARP_Q1 = 26380.0
         self.SHARP_Q2 = 76730.0
-	self.SHARP_DISPLACEMENT = 0
+        self.SHARP_DISPLACEMENT = 0
         self.period = 0.125
         self.vel_rot_desired = 0
         self.vel_trans_desired = 0
@@ -38,9 +38,8 @@ class RosBridgeMicromaestro:
         self.periods_without_speed_cmd = 0
         # Number of periods we are going to wait before motors stop when
         # no speed cmd is received
-        self.SAFE_STOP_WAITING_THRESHOLD = 1
-
-	self.SerialAccessLock = Lock()
+        self.SAFE_STOP_WAITING_THRESHOLD = 0
+        self.SerialAccessLock = Lock()
 
     def stop_motors(self):
         self.maestroController.setTarget(self.LEFT_SERVO, 0)
@@ -50,8 +49,11 @@ class RosBridgeMicromaestro:
         self.vel_rot_desired = speed_msg.angular.z
         self.vel_trans_desired = speed_msg.linear.x
 
-        self.vel_trans = self.k_trans*(self.vel_trans_desired - self.vel_trans)
-        self.vel_rot = self.k_rot*(self.vel_rot_desired - self.vel_rot)
+        #self.vel_trans = self.k_trans*(self.vel_trans_desired - self.vel_trans)
+        #self.vel_rot = self.k_rot*(self.vel_rot_desired - self.vel_rot)
+
+        self.vel_trans = 0.4*self.vel_trans + 0.6*self.vel_trans_desired
+        self.vel_rot = 0.4*self.vel_rot + 0.6*self.vel_rot_desired
 
         r_angular_speed = self.vel_trans/self.wheel_radius + self.vel_rot*self.wheel_basis/self.wheel_radius/2
         l_angular_speed = self.vel_trans/self.wheel_radius - self.vel_rot*self.wheel_basis/self.wheel_radius/2
@@ -59,40 +61,38 @@ class RosBridgeMicromaestro:
         # set servo target accordingly to desired speed
         # we need to adjust this to compensate friction and allow
         # the robot to move at a known speed in m/s
-        r_servo_target = 6000 - r_angular_speed * 1500
-        l_servo_target = 6000 - l_angular_speed * 1500
+        r_servo_target = 6000 - r_angular_speed *  1333.51
+        l_servo_target = 6000 - l_angular_speed * 1333.51
 
-	# saturate servo target values
-	if r_servo_target > 9000:
-		r_servo_target = 9000
-	elif r_servo_target < 3000:
-		r_servo_target = 3000
-	if l_servo_target > 9000:
-		l_servo_target = 9000
-	elif l_servo_target < 3000:
-		l_servo_target = 3000
+        # saturate servo target values
+        if r_servo_target > 9000:
+            r_servo_target = 9000
+        elif r_servo_target < 3000:
+            r_servo_target = 3000
+        if l_servo_target > 9000:
+            l_servo_target = 9000
+        elif l_servo_target < 3000:
+            l_servo_target = 3000
 
-	self.r_servo_target_pub.publish(int(r_servo_target))
-	self.l_servo_target_pub.publish(int(l_servo_target))
+        self.r_servo_target_pub.publish(int(r_servo_target))
+        self.l_servo_target_pub.publish(int(l_servo_target))
 
-	if self.SerialAccessLock.acquire(): # Stop waiting for release after 1 second
-        	self.maestroController.setTarget(self.LEFT_SERVO, int(l_servo_target))
-        	self.maestroController.setTarget(self.RIGHT_SERVO, int(r_servo_target))
-		self.SerialAccessLock.release()
+        with self.SerialAccessLock:
+            self.maestroController.setTarget(self.LEFT_SERVO, int(l_servo_target))
+            self.maestroController.setTarget(self.RIGHT_SERVO, int(r_servo_target))
 
     def main(self):
         rospy.init_node('ros_bridge_micromaestro', anonymous=False)
         rospy.Subscriber("cmd_vel", Twist, self.speed_callback)
         sharp_pub = rospy.Publisher("sharp_distance", Int32, queue_size=10)
-	sharp_raw_pub = rospy.Publisher("sharp_raw", Int32, queue_size=10)
+        sharp_raw_pub = rospy.Publisher("sharp_raw", Int32, queue_size=10)
         self.r_servo_target_pub = rospy.Publisher("r_servo_target", Int32, queue_size=10)
-	self.l_servo_target_pub = rospy.Publisher("l_servo_target", Int32, queue_size=10)
-	rate = rospy.Rate(1 / self.period)
+        self.l_servo_target_pub = rospy.Publisher("l_servo_target", Int32, queue_size=10)
+        rate = rospy.Rate(1 / self.period)
 
         while not rospy.is_shutdown():
-            if self.SerialAccessLock.acquire():
-           	output = self.maestroController.getPosition(self.SHARP_SENSOR)
-            	self.SerialAccessLock.release()
+            with self.SerialAccessLock:
+                output = self.maestroController.getPosition(self.SHARP_SENSOR)
             # Publish raw ADC reading from sensor
             sharp_raw_pub.publish(output)
             # publish distance in cm using conversion from ADC reading to cm
@@ -104,7 +104,7 @@ class RosBridgeMicromaestro:
             # Check if we are not receiving speed commands, so we need to stop the motors
             if not self.speed_cmd_received_flag:
                 self.periods_without_speed_cmd += 1
-                if self.periods_without_speed_cmd == 1:
+                if self.periods_without_speed_cmd == self.SAFE_STOP_WAITING_THRESHOLD:
                     self.stop_motors()
                     self.periods_without_speed_cmd = 0
             else:

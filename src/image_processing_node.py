@@ -23,7 +23,9 @@ class ImageProcessing:
         self.image_pub = rospy.Publisher("processed_image", Image, queue_size=2)
         # Initialize the camera and grab a reference to the raw camera capture
         self.camera = PiCamera()
-        self.camera.resolution = (640, 480)
+        self.camera.vflip = True
+	self.camera.hflip = False
+	self.camera.resolution = (640, 480)
         self.camera.framerate = 2
         self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
 
