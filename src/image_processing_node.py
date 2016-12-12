@@ -24,9 +24,9 @@ class ImageProcessing:
         # Initialize the camera and grab a reference to the raw camera capture
         self.camera = PiCamera()
         self.camera.vflip = True
-	self.camera.hflip = False
-	self.camera.resolution = (640, 480)
-        self.camera.framerate = 4
+        self.camera.hflip = False
+        self.camera.resolution = (640, 480)
+        self.camera.framerate = rospy.get_param('~framerate', '4')
         self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
 
         # Allow the camera to warmup
