@@ -26,7 +26,7 @@ class ImageProcessing:
         self.camera.vflip = True
 	self.camera.hflip = False
 	self.camera.resolution = (640, 480)
-        self.camera.framerate = 2
+        self.camera.framerate = 4
         self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
 
         # Allow the camera to warmup
