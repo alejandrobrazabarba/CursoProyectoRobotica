@@ -8,7 +8,9 @@ import maestro
 import rospy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32
+
 from threading import Lock
+
 
 class RosBridgeMicromaestro:
     def __init__(self):
@@ -41,6 +43,13 @@ class RosBridgeMicromaestro:
         self.SAFE_STOP_WAITING_THRESHOLD = 0
         self.SerialAccessLock = Lock()
 
+        rospy.init_node('ros_bridge_micromaestro', anonymous=False)
+        rospy.Subscriber("cmd_vel", Twist, self.speed_callback)
+        self.sharp_pub = rospy.Publisher("sharp_distance", Int32, queue_size=10)
+        self.sharp_raw_pub = rospy.Publisher("sharp_raw", Int32, queue_size=10)
+        self.r_servo_target_pub = rospy.Publisher("r_servo_target", Int32, queue_size=10)
+        self.l_servo_target_pub = rospy.Publisher("l_servo_target", Int32, queue_size=10)
+
     def stop_motors(self):
         self.maestroController.setTarget(self.LEFT_SERVO, 0)
         self.maestroController.setTarget(self.RIGHT_SERVO, 0)
@@ -49,8 +58,8 @@ class RosBridgeMicromaestro:
         self.vel_rot_desired = speed_msg.angular.z
         self.vel_trans_desired = speed_msg.linear.x
 
-        #self.vel_trans = self.k_trans*(self.vel_trans_desired - self.vel_trans)
-        #self.vel_rot = self.k_rot*(self.vel_rot_desired - self.vel_rot)
+        # self.vel_trans = self.k_trans*(self.vel_trans_desired - self.vel_trans)
+        # self.vel_rot = self.k_rot*(self.vel_rot_desired - self.vel_rot)
 
         self.vel_trans = 0.4*self.vel_trans + 0.6*self.vel_trans_desired
         self.vel_rot = 0.4*self.vel_rot + 0.6*self.vel_rot_desired
@@ -61,8 +70,19 @@ class RosBridgeMicromaestro:
         # set servo target accordingly to desired speed
         # we need to adjust this to compensate friction and allow
         # the robot to move at a known speed in m/s
-        r_servo_target = 6000 - r_angular_speed *  1333.51
-        l_servo_target = 6000 - l_angular_speed * 1333.51
+        # We know that the maximum PWM increment with respect to center position (1500 us),
+        # for which the motor speed will saturate is approximately 340 us, that multiplied by 4 is 1360
+        # We also know that, the maximum speed will be 0.19 m/s approx, and with the radius of the wheel,
+        # that corresponds to an angular speed of 5.699287589 rad/s
+        # So, for obtaining the servo target that we will command, we'll use the next equation,
+        # supposing that the system is linear, which is not true
+        # servo_target = center_position_us * 4 - angular_speed * Constant
+        # making a substitution with the values corresponding to max speed, we can extract the constant
+        # max_servo_target = center_position_us * 4 - max_angular_speed * constant
+        # constant = (center_position_us * 4 - max_servo_target) / max_angular_speed
+        # constant = (6000 - 4640) / 5.699 = 238.638
+        r_servo_target = 6000 - r_angular_speed * 238.638
+        l_servo_target = 6000 - l_angular_speed * 238.638
 
         # saturate servo target values
         if r_servo_target > 9000:
@@ -82,24 +102,22 @@ class RosBridgeMicromaestro:
             self.maestroController.setTarget(self.RIGHT_SERVO, int(r_servo_target))
 
     def main(self):
-        rospy.init_node('ros_bridge_micromaestro', anonymous=False)
-        rospy.Subscriber("cmd_vel", Twist, self.speed_callback)
-        sharp_pub = rospy.Publisher("sharp_distance", Int32, queue_size=10)
-        sharp_raw_pub = rospy.Publisher("sharp_raw", Int32, queue_size=10)
-        self.r_servo_target_pub = rospy.Publisher("r_servo_target", Int32, queue_size=10)
-        self.l_servo_target_pub = rospy.Publisher("l_servo_target", Int32, queue_size=10)
+
         rate = rospy.Rate(1 / self.period)
 
         while not rospy.is_shutdown():
             with self.SerialAccessLock:
                 output = self.maestroController.getPosition(self.SHARP_SENSOR)
             # Publish raw ADC reading from sensor
-            sharp_raw_pub.publish(output)
+            self.sharp_raw_pub.publish(output)
             # publish distance in cm using conversion from ADC reading to cm
-            distance = 100* (self.SHARP_P1 / (output**2 -2*self.SHARP_DISPLACEMENT*output + self.SHARP_DISPLACEMENT**2 +
-            self.SHARP_Q1*output -self.SHARP_Q1*self.SHARP_DISPLACEMENT + self.SHARP_Q2))
+            distance = 100 * (self.SHARP_P1 / (output**2 - 2*self.SHARP_DISPLACEMENT*output
+                                               + self.SHARP_DISPLACEMENT**2
+                                               + self.SHARP_Q1*output
+                                               - self.SHARP_Q1*self.SHARP_DISPLACEMENT
+                                               + self.SHARP_Q2))
             # distance = output
-            sharp_pub.publish(distance)
+            self.sharp_pub.publish(distance)
 
             # Check if we are not receiving speed commands, so we need to stop the motors
             if not self.speed_cmd_received_flag:
