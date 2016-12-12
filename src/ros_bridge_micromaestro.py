@@ -121,7 +121,7 @@ class RosBridgeMicromaestro:
         if not external_cmd :
             # If the flag of received cmd is down we need to reduce motor speed as soon as posible
             if apply_motor_speed_cmd :
-                t = Timer(0.2, self.speed_callback, [self.NullSpeedCmd, False])
+                t = Timer(0.25, self.speed_callback, [self.NullSpeedCmd, False])
                 t.start()
             # If the flag is up we don't need to hurry
             else:
@@ -133,6 +133,7 @@ class RosBridgeMicromaestro:
         rate = rospy.Rate(1 / self.period)
         # We program the execution of speed_callback with a null speed command
         t = Timer(1.0, self.speed_callback, args=[ self.NullSpeedCmd, False ])
+        t.start()
         
         while not rospy.is_shutdown():
             with self.SerialAccessLock:
