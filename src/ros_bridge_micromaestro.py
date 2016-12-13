@@ -12,6 +12,7 @@ from std_msgs.msg import Int32
 from threading import Lock
 from threading import Timer
 
+
 class RosBridgeMicromaestro:
     def __init__(self):
         # Instantiate micromaestro controller.
@@ -70,16 +71,16 @@ class RosBridgeMicromaestro:
     # is received
     def set_speed(self, speed_msg, external_cmd=True):
         apply_motor_speed_cmd = True
-        if external_cmd :
+        if external_cmd:
             self.speed_cmd_received_flag = True
         else:
-            if not self.speed_cmd_received_flag :
+            if not self.speed_cmd_received_flag:
                 apply_motor_speed_cmd = True
             else:
                 apply_motor_speed_cmd = False
                 self.speed_cmd_received_flag = False
 
-        if apply_motor_speed_cmd :
+        if apply_motor_speed_cmd:
             self.vel_rot_desired = speed_msg.angular.z
             self.vel_trans_desired = speed_msg.linear.x
 
@@ -127,12 +128,12 @@ class RosBridgeMicromaestro:
                 self.maestroController.setTarget(self.RIGHT_SERVO, int(r_servo_target))
 
         # Program next timed execution of the callback
-        if not external_cmd :
+        if not external_cmd:
             with self.timerAccessLock:
                 if self.programTimer:
-		    print "Programming next set_speed execution"
+                    print "Programming next set_speed execution"
                     # If the flag of received cmd is down we need to reduce motor speed as soon as posible
-                    if apply_motor_speed_cmd :
+                    if apply_motor_speed_cmd:
                         self.timer = Timer(0.25, self.set_speed, [self.NullSpeedCmd, False])
                         self.timer.start()
                     # If the flag is up we don't need to hurry
@@ -144,39 +145,39 @@ class RosBridgeMicromaestro:
 
         rate = rospy.Rate(1 / self.period)
         # We program the execution of speed_callback with a null speed command
-        self.timer = Timer(1.0, self.set_speed, args=[ self.NullSpeedCmd, False ])
+        self.timer = Timer(1.0, self.set_speed, args=[self.NullSpeedCmd, False])
         self.timer.start()
+        try:
+            while not rospy.is_shutdown():
+                with self.SerialAccessLock:
+                    output = self.maestroController.getPosition(self.SHARP_SENSOR)
+                # Publish raw ADC reading from sensor
+                self.sharp_raw_pub.publish(output)
+                # publish distance in cm using conversion from ADC reading to cm
+                distance = 100 * (self.SHARP_P1 / (output**2 - 2*self.SHARP_DISPLACEMENT*output
+                                                   + self.SHARP_DISPLACEMENT**2
+                                                   + self.SHARP_Q1*output
+                                                   - self.SHARP_Q1*self.SHARP_DISPLACEMENT
+                                                   + self.SHARP_Q2))
+                # distance = output
+                self.sharp_pub.publish(distance)
 
-        while not rospy.is_shutdown():
-            with self.SerialAccessLock:
-                output = self.maestroController.getPosition(self.SHARP_SENSOR)
-            # Publish raw ADC reading from sensor
-            self.sharp_raw_pub.publish(output)
-            # publish distance in cm using conversion from ADC reading to cm
-            distance = 100 * (self.SHARP_P1 / (output**2 - 2*self.SHARP_DISPLACEMENT*output
-                                               + self.SHARP_DISPLACEMENT**2
-                                               + self.SHARP_Q1*output
-                                               - self.SHARP_Q1*self.SHARP_DISPLACEMENT
-                                               + self.SHARP_Q2))
-            # distance = output
-            self.sharp_pub.publish(distance)
-
-            # Check if we are not receiving speed commands, so we need to stop the motors
-            # if not self.speed_cmd_received_flag:
-            #    self.periods_without_speed_cmd += 1
-            #    if self.periods_without_speed_cmd == self.SAFE_STOP_WAITING_THRESHOLD:
-            #        self.stop_motors()
-            #        self.periods_without_speed_cmd = 0
-            # else:
-            #    self.speed_cmd_received_flag = False
-            # rate.sleep()
-
-        # Stop motors before exit the program
-        self.stop_motors()
-        with self.timerAccessLock:
+                # Check if we are not receiving speed commands, so we need to stop the motors
+                # if not self.speed_cmd_received_flag:
+                #    self.periods_without_speed_cmd += 1
+                #    if self.periods_without_speed_cmd == self.SAFE_STOP_WAITING_THRESHOLD:
+                #        self.stop_motors()
+                #        self.periods_without_speed_cmd = 0
+                # else:
+                #    self.speed_cmd_received_flag = False
+                rate.sleep()
+        finally:
+            # Stop motors before exit the program
+            self.stop_motors()
+            with self.timerAccessLock:
                     self.programTimer = False
                     self.timer.cancel()
-		    print "Timer cancelled"
+            print "Timer cancelled"
 
 if __name__ == '__main__':
     rosBridgeMicromaestro = RosBridgeMicromaestro()
