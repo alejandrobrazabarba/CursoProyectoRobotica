@@ -131,7 +131,6 @@ class RosBridgeMicromaestro:
         if not external_cmd:
             with self.timerAccessLock:
                 if self.programTimer:
-                    print "Programming next set_speed execution"
                     # If the flag of received cmd is down we need to reduce motor speed as soon as posible
                     if apply_motor_speed_cmd:
                         self.timer = Timer(0.25, self.set_speed, [self.NullSpeedCmd, False])
@@ -177,7 +176,6 @@ class RosBridgeMicromaestro:
             with self.timerAccessLock:
                     self.programTimer = False
                     self.timer.cancel()
-            print "Timer cancelled"
 
 if __name__ == '__main__':
     rosBridgeMicromaestro = RosBridgeMicromaestro()
