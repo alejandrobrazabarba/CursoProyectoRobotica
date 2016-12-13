@@ -54,14 +54,21 @@ class RosBridgeMicromaestro:
         self.l_servo_target_pub = rospy.Publisher("l_servo_target", Int32, queue_size=10)
 
         self.timer = None
+        self.timerAccessLock = Lock()
+        self.programTimer = True
 
     def stop_motors(self):
         self.maestroController.setTarget(self.LEFT_SERVO, 0)
         self.maestroController.setTarget(self.RIGHT_SERVO, 0)
-    # We use speed_callback for the subscriber of external speed commands and
+
+    # This function is called by the cmd_vel subscriber when a new message is received
+    def speed_callback(self, speed_msg):
+        self.set_speed(speed_msg, True)
+
+    # We use set_speed for the subscriber of external speed commands and
     # from a timer that reduces the speed of the motors when no external command
     # is received
-    def speed_callback(self, speed_msg, external_cmd=True):
+    def set_speed(self, speed_msg, external_cmd=True):
         apply_motor_speed_cmd = True
         if external_cmd :
             self.speed_cmd_received_flag = True
@@ -121,22 +128,25 @@ class RosBridgeMicromaestro:
 
         # Program next timed execution of the callback
         if not external_cmd :
-            # If the flag of received cmd is down we need to reduce motor speed as soon as posible
-            if apply_motor_speed_cmd :
-                self.timer = Timer(0.25, self.speed_callback, [self.NullSpeedCmd, False])
-                self.timer.start()
-            # If the flag is up we don't need to hurry
-            else:
-                self.timer = Timer(1.0, self.speed_callback, [self.NullSpeedCmd, False])
-                self.timer.start()
-            
+            with self.timerAccessLock:
+                if self.programTimer:
+		    print "Programming next set_speed execution"
+                    # If the flag of received cmd is down we need to reduce motor speed as soon as posible
+                    if apply_motor_speed_cmd :
+                        self.timer = Timer(0.25, self.set_speed, [self.NullSpeedCmd, False])
+                        self.timer.start()
+                    # If the flag is up we don't need to hurry
+                    else:
+                        self.timer = Timer(1.0, self.set_speed, [self.NullSpeedCmd, False])
+                        self.timer.start()
+
     def main(self):
 
         rate = rospy.Rate(1 / self.period)
         # We program the execution of speed_callback with a null speed command
-        self.timer = Timer(1.0, self.speed_callback, args=[ self.NullSpeedCmd, False ])
+        self.timer = Timer(1.0, self.set_speed, args=[ self.NullSpeedCmd, False ])
         self.timer.start()
-        
+
         while not rospy.is_shutdown():
             with self.SerialAccessLock:
                 output = self.maestroController.getPosition(self.SHARP_SENSOR)
@@ -163,8 +173,10 @@ class RosBridgeMicromaestro:
 
         # Stop motors before exit the program
         self.stop_motors()
-        self.timer.cancel()
-
+        with self.timerAccessLock:
+                    self.programTimer = False
+                    self.timer.cancel()
+		    print "Timer cancelled"
 
 if __name__ == '__main__':
     rosBridgeMicromaestro = RosBridgeMicromaestro()
