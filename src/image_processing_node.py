@@ -12,15 +12,25 @@ import time
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from proyecto_curso_robotica.srv import ImgBroadcastTurnOnOff
+from proyecto_curso_robotica.srv import ImgProcTurnOnOff
 
 
 class ImageProcessing:
-
     def __init__(self):
         # Initialize node
         rospy.init_node('image_processing', anonymous=False)
         self.bridge = CvBridge()
         self.image_pub = rospy.Publisher("processed_image", Image, queue_size=2)
+
+        self.img_broadcast_on = True
+        self.img_proc_on = False
+
+        img_broadcast_srv = rospy.Service('~image_broadcast_on_off', ImgBroadcastTurnOnOff,
+                                          self.handle_img_broadcast_turn_on_off)
+        img_proc_srv = rospy.Service('~image_proc_on_off', ImgProcTurnOnOff,
+                                     self.handle_img_proc_turn_on_off)
+
         # Initialize the camera and grab a reference to the raw camera capture
         self.camera = PiCamera()
         self.camera.vflip = True
@@ -48,6 +58,14 @@ class ImageProcessing:
         self.GREEN = (0, 255, 0)
         self.RED = (0, 0, 255)
 
+    def handle_img_broadcast_turn_on_off(self, req):
+        self.img_broadcast_on = req.on
+        return ImgBroadcastTurnOnOffResponse()
+
+    def handle_img_proc_turn_on_off(self, req):
+        self.img_proc_on = req.on
+        return ImgProcTurnOnOffResponse()
+
     def main(self):
         # previous_time = datetime.now()
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
@@ -56,25 +74,28 @@ class ImageProcessing:
             # previous_time = current_time
             # print "Elapsed time: ", elapsed_time
             image = frame.array
-            # Our operations on the frame come here
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-            # For each region of interest in the image
-            for i in range(0, self.NUM_REGIONS):
-                # Calculate average pixel intensity
-                avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
-                                       self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
-                # Select color for rectangle depending on pixel intensity
-                reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
-                # Draw rectangle
-                cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
-                                     (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
+            if self.img_proc_on:
+                # Our operations on the frame come here
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                # For each region of interest in the image
+                for i in range(0, self.NUM_REGIONS):
+                    # Calculate average pixel intensity
+                    avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
+                                                self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                    # Select color for rectangle depending on pixel intensity
+                    reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
+                    # Draw rectangle
+                    cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
+                                         (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
 
             # print "Publishing image"
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+            if self.img_broadcast_on:
+                self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
             self.rawCapture.truncate(0)
             if rospy.is_shutdown():
-		break
+                break
 
 
 if __name__ == '__main__':
