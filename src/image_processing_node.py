@@ -11,6 +11,7 @@ import time
 # ROS specific imports
 import rospy
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 from proyecto_curso_robotica.srv import ImgBroadcastTurnOnOff
 from proyecto_curso_robotica.srv import ImgProcTurnOnOff
@@ -22,6 +23,7 @@ class ImageProcessing:
         rospy.init_node('image_processing', anonymous=False)
         self.bridge = CvBridge()
         self.image_pub = rospy.Publisher("processed_image", Image, queue_size=2)
+        self.cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
         self.img_broadcast_on = True
         self.img_proc_on = False
@@ -57,6 +59,9 @@ class ImageProcessing:
 
         self.GREEN = (0, 255, 0)
         self.RED = (0, 0, 255)
+        
+        self.regionLineDetectedFlags = numpy.zeros((1, self.NUM_REGIONS), dtype=numpy.uint8)
+        self.twistCommand = Twist()
 
     def handle_img_broadcast_turn_on_off(self, req):
         self.img_broadcast_on = req.on
@@ -86,9 +91,21 @@ class ImageProcessing:
                                                 self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     # Select color for rectangle depending on pixel intensity
                     reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
+                    self.regionLineDetectedFlags[i] = 1 if avg_int < self.intensity_threshold else 0
                     # Draw rectangle
                     cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
                                          (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
+
+                leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
+                rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
+            
+                self.twistCommand.linear.x = 0.1
+                if leftRegionsOccupied > rightRegionsOccupied:
+                    self.twistCommand.angular.z = 0.35
+                else:
+                    self.twistCommand.angular.z = -0.35
+                
+                self.cmd_vel_pub.publish(self.twistCommand)
 
             # print "Publishing image"
             if self.img_broadcast_on:
