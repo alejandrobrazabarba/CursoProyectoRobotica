@@ -90,20 +90,23 @@ class ImageProcessing:
                 image_available = True
                 # Our operations on the frame come here
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                
+                # Apply Otsu's binarization
+                ret, thresh_img = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
                 # For each region of interest in the image
                 for i in range(0, self.NUM_REGIONS):
                     if self.threshold_method == 'median':
                         # Calculate average pixel intensity
-                        avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
-                                                    self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                        avg_int = numpy.median(thresh_img[self.reg_vert_offset:self.reg_vert_end,
+                                                          self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     elif self.threshold_method == 'average':
-                        avg_int = numpy.average(gray[self.reg_vert_offset:self.reg_vert_end,
-                                                     self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                        avg_int = numpy.average(thresh_img[self.reg_vert_offset:self.reg_vert_end,
+                                                           self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     else:
                         # If the parameter doesn't match any of the possible options, it defaults to average
-                        avg_int = numpy.average(gray[self.reg_vert_offset:self.reg_vert_end,
-                                                     self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                        avg_int = numpy.average(thresh_img[self.reg_vert_offset:self.reg_vert_end,
+                                                           self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     # Select color for rectangle depending on pixel intensity
                     reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
                     self.regionLineDetectedFlags[i] = 1 if avg_int < self.intensity_threshold else 0
