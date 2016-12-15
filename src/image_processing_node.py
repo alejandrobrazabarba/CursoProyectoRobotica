@@ -13,8 +13,8 @@ import rospy
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
-from proyecto_curso_robotica.srv import ImgBroadcastTurnOnOff
-from proyecto_curso_robotica.srv import ImgProcTurnOnOff
+from proyecto_curso_robotica.srv import *
+from proyecto_curso_robotica.srv import *
 
 
 class ImageProcessing:
@@ -55,12 +55,14 @@ class ImageProcessing:
         self.reg_horiz_width = self.img_width/self.NUM_REGIONS
         self.reg_horiz_divs = numpy.arange(0, self.img_width+1, self.img_width/self.NUM_REGIONS)
         self.reg_num_pixels = 128*20
-        self.intensity_threshold = 30
+        self.intensity_threshold = rospy.get_param('~intensity_threshold','30')
+
+        self.threshold_method = rospy.get_param('~threshold_method','median')
 
         self.GREEN = (0, 255, 0)
         self.RED = (0, 0, 255)
         
-        self.regionLineDetectedFlags = numpy.zeros((1, self.NUM_REGIONS), dtype=numpy.uint8)
+        self.regionLineDetectedFlags = numpy.zeros(self.NUM_REGIONS, dtype=numpy.uint8)
         self.twistCommand = Twist()
 
     def handle_img_broadcast_turn_on_off(self, req):
@@ -79,32 +81,47 @@ class ImageProcessing:
             # previous_time = current_time
             # print "Elapsed time: ", elapsed_time
             image = frame.array
-
-            if self.img_proc_on:
+            
+            if self.img_proc_on or self.img_broadcast_on:
+                # The goal of this flag is to protect the code against the case
+                # where the flag self.img_proc_on is changed between the execution of this block of code
+                # and the one below the next if statement
+                # in that case we would send a speed command based on a previous line detection
+                image_available = True
                 # Our operations on the frame come here
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
                 # For each region of interest in the image
                 for i in range(0, self.NUM_REGIONS):
-                    # Calculate average pixel intensity
-                    avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
-                                                self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                    if self.threshold_method == 'median':
+                        # Calculate average pixel intensity
+                        avg_int = numpy.median(gray[self.reg_vert_offset:self.reg_vert_end,
+                                                    self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                    elif self.threshold_method == 'average':
+                        avg_int = numpy.average(gray[self.reg_vert_offset:self.reg_vert_end,
+                                                     self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
+                    else:
+                        # If the parameter doesn't match any of the possible options, it defaults to average
+                        avg_int = numpy.average(gray[self.reg_vert_offset:self.reg_vert_end,
+                                                     self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     # Select color for rectangle depending on pixel intensity
                     reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
                     self.regionLineDetectedFlags[i] = 1 if avg_int < self.intensity_threshold else 0
                     # Draw rectangle
                     cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
-                                         (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
-
+                                        (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
+            if self.img_proc_on and image_available:
                 leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
                 rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
-            
+
                 self.twistCommand.linear.x = 0.1
                 if leftRegionsOccupied > rightRegionsOccupied:
                     self.twistCommand.angular.z = 0.35
-                else:
+                elif leftRegionsOccupied < rightRegionsOccupied:
                     self.twistCommand.angular.z = -0.35
-                
+                else:
+                    self.twistCommand.angular.z = 0
+
                 self.cmd_vel_pub.publish(self.twistCommand)
 
             # print "Publishing image"
