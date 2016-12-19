@@ -126,17 +126,15 @@ class ImageProcessing:
         leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
         rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
     
-    
-    
-    self.twistCommand.linear.x = 0.1
-    if leftRegionsOccupied > rightRegionsOccupied:
-        self.twistCommand.angular.z = 0.35
-    elif leftRegionsOccupied < rightRegionsOccupied:
-        self.twistCommand.angular.z = -0.35
-    else:
-        self.twistCommand.angular.z = 0
+        self.twistCommand.linear.x = 0.1
+        if leftRegionsOccupied > rightRegionsOccupied:
+            self.twistCommand.angular.z = 0.35
+        elif leftRegionsOccupied < rightRegionsOccupied:
+            self.twistCommand.angular.z = -0.35
+        else:
+            self.twistCommand.angular.z = 0
 
-    self.cmd_vel_pub.publish(self.twistCommand)
+        self.cmd_vel_pub.publish(self.twistCommand)
 
 if __name__ == '__main__':
     imageProcessing = ImageProcessing()
