@@ -2,7 +2,7 @@
 
 import rospy
 from proyecto_curso_robotica.srv import *
-from sensor_msgs import Joy
+from sensor_msgs.msg import Joy
 
 class TeleopSwitch:
     def __init__(self):
