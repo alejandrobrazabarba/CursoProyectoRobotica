@@ -17,7 +17,7 @@ class TeleopSwitch:
         self.procButtonIndex = rospy.get_param('~mode_switch_button', '2')
         self.broadButtonIndex = rospy.get_param('~broadcast_button', '3')
         
-        self.joy_sub = rospy.Subscriber("joy", Joy, joy_callback)
+        self.joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback)
         
 
 def joy_callback(self,data):
