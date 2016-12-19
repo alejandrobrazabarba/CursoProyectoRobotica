@@ -9,6 +9,7 @@
 		<param name="framerate" value="10" type="int" />
 		<param name="threshold_method" value="average" type="string" />
 		<param name="intensity_threshold" value="60" type="int" />
+		<param name="reg_vert_offset" value="300" type="int" />
 	</node>
 	
 	<node machine="ambrus" pkg="image_transport" type="republish" name="image_republisher" args="raw theora">
@@ -31,6 +32,8 @@
 		<param name="scale_angular" value="1.0" type="double" />
 	</node>
 	 
+	 
+	<node machine="ambrus" pkg="topic_tools" type="throttle" name="wiimote_joy_throttle" args="messages /joy 10 /joy_throttle" />
 	<!-- Node that allows to change between manual and automatic mode with a wiimote button press -->
 	<!-- The button can be selected with a ros parameter -->
 	<node machine="ambrus" pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch" output="screen">
@@ -39,7 +42,7 @@
 	    <param name="broadcast_button" value="3" type="int" />
 	    <remap from="image_proc_on_off" to="image_processing/image_proc_on_off" />
 	    <remap from="image_broadcast_on_off" to="image_processing/image_broadcast_on_off" />
-	    <remap from="joy" to="joy" />
+	    <remap from="joy" to="joy_throttle" />
 	</node>
 
 	<node machine="ambrus" pkg="proyecto_curso_robotica" type="ros_bridge_micromaestro.py" name="ros_bridge_micromaestro" output="screen" respawn="true"/>

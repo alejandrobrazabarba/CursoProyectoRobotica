@@ -47,7 +47,7 @@ class ImageProcessing:
 
         # Define the regions of the image to analyse
         self.NUM_REGIONS = 10
-        self.reg_vert_offset = 400
+        self.reg_vert_offset = rospy.get_param('~reg_vert_offset', '400')
         self.reg_vert_width = 20
         self.reg_vert_end = self.reg_vert_offset + self.reg_vert_width
         self.reg_horiz_width = self.img_width/self.NUM_REGIONS
@@ -116,8 +116,8 @@ class ImageProcessing:
 
             # print "Publishing image"
             if self.img_broadcast_on:
-                #self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
-                self.image_pub.publish(self.bridge.cv2_to_imgmsg(thresh_img, "mono8"))
+                self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+                #self.image_pub.publish(self.bridge.cv2_to_imgmsg(thresh_img, "mono8"))
             self.rawCapture.truncate(0)
             if rospy.is_shutdown():
                 break
