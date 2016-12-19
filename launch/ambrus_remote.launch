@@ -39,7 +39,7 @@
 	    <param name="broadcast_button" value="3" type="int" />
 	    <remap from="image_proc_on_off" to="image_processing/image_proc_on_off" />
 	    <remap from="image_broadcast_on_off" to="image_processing/image_broadcast_on_off" />
-	    <remap from="joy" to="wiimote/nunchuk_throttle" />
+	    <remap from="joy" to="joy" />
 	</node>
 
 	<node machine="ambrus" pkg="proyecto_curso_robotica" type="ros_bridge_micromaestro.py" name="ros_bridge_micromaestro" output="screen" respawn="true"/>
