@@ -1,0 +1,48 @@
+<launch>
+	<machine name="ambrus" user="alejandro" address="ambrus.local" env-loader="/home/alejandro/ros-ssh-env-loader.bash" timeout="40.0" />
+	
+	<!-- This node exposes two services -->
+	<!-- that can be called -->
+	<!-- ~image_broadcast_on_off -->
+	<!-- ~image_proc_on_off -->
+	<node machine="ambrus" pkg="proyecto_curso_robotica" type="image_processing_node.py" name="image_processing" output="screen" respawn="true">
+		<param name="framerate" value="10" type="int" />
+		<param name="threshold_method" value="average" type="string" />
+		<param name="intensity_threshold" value="60" type="int" />
+	</node>
+	
+	<node machine="ambrus" pkg="image_transport" type="republish" name="image_republisher" args="raw theora">
+		<remap from="in" to="processed_image"/>
+		<remap from="out" to="image_compressed"/>
+	</node>
+
+	<node pkg="image_view" type="image_view" name="image_viewer" args="theora">
+		<remap from="image" to="image_compressed"/>
+	</node>	
+	
+	<!-- Wiimote Nodes -->
+	<node machine="ambrus" pkg="wiimote" type="wiimote_node.py" name="wiimote_node" 
+		output="screen" respawn="true"/>
+	<node machine="ambrus" pkg="topic_tools" type="throttle" name="wiimote_nunchuk_msgs_throttle"
+		args="messages /wiimote/nunchuk 10 /wiimote/nunchuk_throttle"/>
+	<node machine="ambrus" pkg="teleop_twist_joy" type="teleop_node" name="teleop_node">
+		<remap from="joy" to="wiimote/nunchuk_throttle"/>
+		<param name="scale_linear" value="0.15" type="double" />
+		<param name="scale_angular" value="1.0" type="double" />
+	</node>
+	 
+	<!-- Node that allows to change between manual and automatic mode with a wiimote button press -->
+	<!-- The button can be selected with a ros parameter -->
+	<node pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch">
+	    <!-- This parameter is the index corresponding to wiimote's A button in the button state array of /joy topic -->
+	    <param name="mode_switch_button" value="2" type="int"/>
+	    <param name="broadcast_button" value="3" type="int" />
+	    <remap from="image_proc_on_off" to="image_processing/image_proc_on_off" />
+	    <remap from="image_broadcast_on_off" to="image_processing/image_broadcast_on_off" />
+	    <remap from="joy" to="wiimote/nunchuk_throttle" />
+	</node>
+
+	<node machine="ambrus" pkg="proyecto_curso_robotica" type="ros_bridge_micromaestro.py" name="ros_bridge_micromaestro" output="screen" respawn="true"/>
+
+</launch>
+

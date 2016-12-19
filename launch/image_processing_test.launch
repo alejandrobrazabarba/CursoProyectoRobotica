@@ -1,0 +1,17 @@
+<launch>
+	<machine name="ambrus" user="alejandro" address="ambrus.local" env-loader="/home/alejandro/ros-ssh-env-loader.bash" timeout="40.0" />
+	
+	<node machine="ambrus" pkg="proyecto_curso_robotica" type="image_processing_node.py" name="image_processing" output="screen" respawn="true">
+	</node>
+	
+	<node machine="ambrus" pkg="image_transport" type="republish" name="image_republisher" args="raw theora">
+		<remap from="in" to="processed_image"/>
+		<remap from="out" to="image_compressed"/>
+	</node>
+
+	<node pkg="image_view" type="image_view" name="image_viewer" args="theora">
+		<remap from="image" to="image_compressed"/>
+	</node>	
+	
+</launch>
+

@@ -14,8 +14,6 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 from proyecto_curso_robotica.srv import *
-from proyecto_curso_robotica.srv import *
-
 
 class ImageProcessing:
     def __init__(self):
@@ -61,7 +59,7 @@ class ImageProcessing:
 
         self.GREEN = (0, 255, 0)
         self.RED = (0, 0, 255)
-        
+
         self.regionLineDetectedFlags = numpy.zeros(self.NUM_REGIONS, dtype=numpy.uint8)
         self.twistCommand = Twist()
 
@@ -81,7 +79,7 @@ class ImageProcessing:
             # previous_time = current_time
             # print "Elapsed time: ", elapsed_time
             image = frame.array
-            
+
             if self.img_proc_on or self.img_broadcast_on:
                 # The goal of this flag is to protect the code against the case
                 # where the flag self.img_proc_on is changed between the execution of this block of code
@@ -90,7 +88,7 @@ class ImageProcessing:
                 image_available = True
                 # Our operations on the frame come here
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                
+
                 # Apply Otsu's binarization
                 ret, thresh_img = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
@@ -114,26 +112,31 @@ class ImageProcessing:
                     cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
                                         (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
             if self.img_proc_on and image_available:
-                leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
-                rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
-
-                self.twistCommand.linear.x = 0.1
-                if leftRegionsOccupied > rightRegionsOccupied:
-                    self.twistCommand.angular.z = 0.35
-                elif leftRegionsOccupied < rightRegionsOccupied:
-                    self.twistCommand.angular.z = -0.35
-                else:
-                    self.twistCommand.angular.z = 0
-
-                self.cmd_vel_pub.publish(self.twistCommand)
+                calc_and_send_speed_cmd()
 
             # print "Publishing image"
             if self.img_broadcast_on:
-                self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+                #self.image_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
+                self.image_pub.publish(self.bridge.cv2_to_imgmsg(thresh_img, "mono8"))
             self.rawCapture.truncate(0)
             if rospy.is_shutdown():
                 break
 
+def calc_and_send_speed_cmd(self):
+    leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
+    rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
+    
+    
+    
+    self.twistCommand.linear.x = 0.1
+    if leftRegionsOccupied > rightRegionsOccupied:
+        self.twistCommand.angular.z = 0.35
+    elif leftRegionsOccupied < rightRegionsOccupied:
+        self.twistCommand.angular.z = -0.35
+    else:
+        self.twistCommand.angular.z = 0
+
+    self.cmd_vel_pub.publish(self.twistCommand)
 
 if __name__ == '__main__':
     imageProcessing = ImageProcessing()
