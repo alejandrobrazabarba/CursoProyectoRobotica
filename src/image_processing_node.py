@@ -112,7 +112,7 @@ class ImageProcessing:
                     cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
                                         (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
             if self.img_proc_on and image_available:
-                calc_and_send_speed_cmd()
+                self.calc_and_send_speed_cmd()
 
             # print "Publishing image"
             if self.img_broadcast_on:
@@ -122,9 +122,9 @@ class ImageProcessing:
             if rospy.is_shutdown():
                 break
 
-def calc_and_send_speed_cmd(self):
-    leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
-    rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
+    def calc_and_send_speed_cmd(self):
+        leftRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[0:self.NUM_REGIONS/2])
+        rightRegionsOccupied = numpy.sum(self.regionLineDetectedFlags[self.NUM_REGIONS/2:self.NUM_REGIONS])
     
     
     
