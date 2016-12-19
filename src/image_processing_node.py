@@ -79,7 +79,7 @@ class ImageProcessing:
             # previous_time = current_time
             # print "Elapsed time: ", elapsed_time
             image = frame.array
-
+            image_available = False
             if self.img_proc_on or self.img_broadcast_on:
                 # The goal of this flag is to protect the code against the case
                 # where the flag self.img_proc_on is changed between the execution of this block of code
