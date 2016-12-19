@@ -20,23 +20,23 @@ class TeleopSwitch:
         self.joy_sub = rospy.Subscriber("joy", Joy, self.joy_callback)
         
 
-def joy_callback(self,data):
-    procButtonState = data.buttons[self.procButtonIndex]
-    broadButtonState = data.buttons[self.broadButtonIndex]
-    if procButtonState == 1 and (self.procButtonLastState == 0):
-        try:
-            self.turn_on_off_img_proc(not self.img_proc_state)
-            self.img_proc_state = not self.img_proc_state
-        except rospy.ServiceException, e:
-            pass
-    if broadButtonState == 1 and (self.broadButtonLastState == 0):
-        try:
-            self.turn_on_off_img_broadcast(not self.img_broadcast_state)
-            self.img_broadcast_state = not self.img_broadcast_state
-        except rospy.ServiceException, e:
-            pass 
-    self.procButtonLastState = procButtonState
-    self.broadButtonLastState = broadButtonState   
+    def joy_callback(self,data):
+        procButtonState = data.buttons[self.procButtonIndex]
+        broadButtonState = data.buttons[self.broadButtonIndex]
+        if procButtonState == 1 and (self.procButtonLastState == 0):
+            try:
+                self.turn_on_off_img_proc(not self.img_proc_state)
+                self.img_proc_state = not self.img_proc_state
+            except rospy.ServiceException, e:
+                pass
+        if broadButtonState == 1 and (self.broadButtonLastState == 0):
+            try:
+                self.turn_on_off_img_broadcast(not self.img_broadcast_state)
+                self.img_broadcast_state = not self.img_broadcast_state
+            except rospy.ServiceException, e:
+                pass 
+        self.procButtonLastState = procButtonState
+        self.broadButtonLastState = broadButtonState   
 
 if __name__ == '__main__':
     teleopSwitch = TeleopSwitch()
