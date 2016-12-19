@@ -33,7 +33,7 @@
 	 
 	<!-- Node that allows to change between manual and automatic mode with a wiimote button press -->
 	<!-- The button can be selected with a ros parameter -->
-	<node pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch">
+	<node machine="ambrus" pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch" output="screen">
 	    <!-- This parameter is the index corresponding to wiimote's A button in the button state array of /joy topic -->
 	    <param name="mode_switch_button" value="2" type="int"/>
 	    <param name="broadcast_button" value="3" type="int" />
