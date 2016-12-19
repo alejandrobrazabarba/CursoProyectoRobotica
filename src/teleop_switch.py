@@ -25,14 +25,14 @@ def joy_callback(self,data):
     broadButtonState = data.buttons[self.broadButtonIndex]
     if procButtonState == 1 and (self.procButtonLastState == 0):
         try:
-            self.turn_on_off_img_proc(!self.img_proc_state)
-            self.img_proc_state = !self.img_proc_state
+            self.turn_on_off_img_proc(not self.img_proc_state)
+            self.img_proc_state = not self.img_proc_state
         except rospy.ServiceException, e:
             pass
     if broadButtonState == 1 and (self.broadButtonLastState == 0):
         try:
-            self.turn_on_off_img_broadcast(!self.img_broadcast_state)
-            self.img_broadcast_state = !self.img_broadcast_state
+            self.turn_on_off_img_broadcast(not self.img_broadcast_state)
+            self.img_broadcast_state = not self.img_broadcast_state
         except rospy.ServiceException, e:
             pass 
     self.procButtonLastState = procButtonState
