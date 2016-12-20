@@ -130,9 +130,9 @@ class ImageProcessing:
     
         self.twistCommand.linear.x = 0.1
         if leftRegionsOccupied > rightRegionsOccupied:
-            self.twistCommand.angular.z = 0.35
+            self.twistCommand.angular.z = 0.2
         elif leftRegionsOccupied < rightRegionsOccupied:
-            self.twistCommand.angular.z = -0.35
+            self.twistCommand.angular.z = -0.2
         else:
             self.twistCommand.angular.z = 0
 

@@ -30,7 +30,7 @@
 	<!-- The button can be selected with a ros parameter -->
 	<node machine="ambrus" pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch" output="screen">
 	    <!-- This parameter is the index corresponding to wiimote's A button in the button state array of /joy topic -->
-	    <param name="mode_switch_button" value="2" type="int"/>
+	    <param name="mode_switch_button" value="5" type="int"/>
 	    <param name="broadcast_button" value="3" type="int" />
 	    <remap from="image_proc_on_off" to="image_processing/image_proc_on_off" />
 	    <remap from="image_broadcast_on_off" to="image_processing/image_broadcast_on_off" />
