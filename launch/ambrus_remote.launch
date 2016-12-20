@@ -9,7 +9,7 @@
 		<param name="framerate" value="10" type="int" />
 		<param name="threshold_method" value="average" type="string" />
 		<param name="intensity_threshold" value="60" type="int" />
-		<param name="reg_vert_offset" value="300" type="int" />
+		<param name="reg_vert_offset" value="200" type="int" />
 	</node>
 	
 	<node machine="ambrus" pkg="image_transport" type="republish" name="image_republisher" args="raw theora">

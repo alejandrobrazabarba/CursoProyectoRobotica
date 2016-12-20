@@ -133,18 +133,18 @@ class RosBridgeMicromaestro:
                 if self.programTimer:
                     # If the flag of received cmd is down we need to reduce motor speed as soon as posible
                     if apply_motor_speed_cmd:
-                        self.timer = Timer(0.25, self.set_speed, [self.NullSpeedCmd, False])
+                        self.timer = Timer(0.5, self.set_speed, [self.NullSpeedCmd, False])
                         self.timer.start()
                     # If the flag is up we don't need to hurry
                     else:
-                        self.timer = Timer(1.0, self.set_speed, [self.NullSpeedCmd, False])
+                        self.timer = Timer(1.5, self.set_speed, [self.NullSpeedCmd, False])
                         self.timer.start()
 
     def main(self):
 
         rate = rospy.Rate(1 / self.period)
         # We program the execution of speed_callback with a null speed command
-        self.timer = Timer(1.0, self.set_speed, args=[self.NullSpeedCmd, False])
+        self.timer = Timer(1.5, self.set_speed, args=[self.NullSpeedCmd, False])
         self.timer.start()
         try:
             while not rospy.is_shutdown():
