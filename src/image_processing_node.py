@@ -23,7 +23,7 @@ class ImageProcessing:
         self.image_pub = rospy.Publisher("processed_image", Image, queue_size=2)
         self.cmd_vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
-        self.img_broadcast_on = True
+        self.img_broadcast_on = rospy.get_param('~broadcast_initial_status', 'False')
         self.img_proc_on = False
 
         img_broadcast_srv = rospy.Service('~image_broadcast_on_off', ImgBroadcastTurnOnOff,
@@ -106,11 +106,13 @@ class ImageProcessing:
                         avg_int = numpy.average(thresh_img[self.reg_vert_offset:self.reg_vert_end,
                                                            self.reg_horiz_divs[i]:self.reg_horiz_divs[i+1]])
                     # Select color for rectangle depending on pixel intensity
-                    reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
                     self.regionLineDetectedFlags[i] = 1 if avg_int < self.intensity_threshold else 0
-                    # Draw rectangle
-                    cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
-                                        (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
+                    
+                    if self.img_broadcast_on:
+                        reg_rect_color = self.RED if avg_int < self.intensity_threshold else self.GREEN
+                        # Draw rectangle
+                        cv2.rectangle(image, (self.reg_horiz_divs[i], self.reg_vert_offset),
+                                            (self.reg_horiz_divs[i+1]-1, self.reg_vert_end-1), reg_rect_color, 1)
             if self.img_proc_on and image_available:
                 self.calc_and_send_speed_cmd()
 

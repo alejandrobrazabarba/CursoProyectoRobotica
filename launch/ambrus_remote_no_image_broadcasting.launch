@@ -10,17 +10,8 @@
 		<param name="threshold_method" value="average" type="string" />
 		<param name="intensity_threshold" value="60" type="int" />
 		<param name="reg_vert_offset" value="200" type="int" />
-		<param name="broadcast_initial_status" value="True" />
+		<param name="broadcast_initial_status" value="False" />
 	</node>
-	
-	<node machine="ambrus" pkg="image_transport" type="republish" name="image_republisher" args="raw theora">
-		<remap from="in" to="processed_image"/>
-		<remap from="out" to="image_compressed"/>
-	</node>
-
-	<node pkg="image_view" type="image_view" name="image_viewer" args="theora">
-		<remap from="image" to="image_compressed"/>
-	</node>	
 	
 	<!-- Wiimote Nodes -->
 	<node machine="ambrus" pkg="wiimote" type="wiimote_node.py" name="wiimote_node" 
