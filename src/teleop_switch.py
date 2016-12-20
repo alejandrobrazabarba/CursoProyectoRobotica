@@ -12,7 +12,7 @@ class TeleopSwitch:
         self.procButtonLastState = 0
         self.broadButtonLastState = 0
         self.turn_on_off_img_proc = rospy.ServiceProxy('image_proc_on_off', ImgProcTurnOnOff)
-        turn_on_off_img_broadcast = rospy.ServiceProxy('image_broadcast_on_off', ImgBroadcastTurnOnOff)
+        self.turn_on_off_img_broadcast = rospy.ServiceProxy('image_broadcast_on_off', ImgBroadcastTurnOnOff)
         
         self.procButtonIndex = rospy.get_param('~mode_switch_button', '2')
         self.broadButtonIndex = rospy.get_param('~broadcast_button', '3')
