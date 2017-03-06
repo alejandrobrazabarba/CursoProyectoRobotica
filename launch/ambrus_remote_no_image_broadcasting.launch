@@ -25,7 +25,7 @@
 	</node>
 	 
 	 
-	<node machine="ambrus" pkg="topic_tools" type="throttle" name="wiimote_joy_throttle" args="messages /joy 2 /joy_throttle" />
+	<node machine="ambrus" pkg="topic_tools" type="throttle" name="wiimote_joy_throttle" args="messages /joy 8 /joy_throttle" />
 	<!-- Node that allows to change between manual and automatic mode with a wiimote button press -->
 	<!-- The button can be selected with a ros parameter -->
 	<node machine="ambrus" pkg="proyecto_curso_robotica" type="teleop_switch.py" name="teleop_switch" output="screen">

@@ -1,0 +1,58 @@
+<launch>
+  <env name="ROS_MASTER_URI" value="http://$(env ROS_IP):11311"/>
+  <machine name="pi" user="pi" address="192.168.43.201" password="raspberry" env-loader="/home/pi/env.sh" timeout="20.0" /> 
+	<!-- Coordenadas de los nodos ancla -->
+	<!-- los prefijos nw sw ne y se indican la posicion del nodo
+	ancla considerando que el norte estara definido por el lado superior del poligono formado por los nodos -->
+	<arg name="nwx" default="0" />
+	<arg name="nwy" default="4" />
+	<arg name="swx" default="0" />
+	<arg name="swy" default="0" />
+	<arg name="nex" default="4" />
+	<arg name="ney" default="4" />
+	<arg name="sex" default="4" />
+	<arg name="sey" default="0" />
+
+  <param name="robot_description" textfile="$(find nxt_robot_gyro_car)/robot.urdf"/>
+
+  <node machine="pi" pkg="nxt_ros" type="joint_states_aggregator.py" name="js_agg" output="screen" />
+  <!-- <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+    <param name="publish_frequency" value="100.0"/>
+  </node> -->
+
+  <node machine="pi" pkg="nxt_ros" type="nxt_ros.py" name="nxt_ros" output="screen" respawn="true">
+    <rosparam command="load" file="$(find nxt_follow_mote)/robot.yaml" />
+    <!--param name="host" value="00:16:53:0D:29:63"/-->
+  </node>
+
+  <group ns="base_parameters">
+    <param name="r_wheel_joint" value="r_wheel_joint"/>
+    <param name="l_wheel_joint" value="l_wheel_joint"/> 
+    <param name="wheel_radius" value="0.0404"/>
+    <param name="wheel_basis" value="0.075"/>
+    <param name="vel_to_eff" value="0.5"/>
+  </group>
+
+  <!-- base controller -->
+  <node machine="pi" pkg="nxt_controllers" type="base_controller.py" name="base_controller" output="screen"/>
+
+  <!-- base odometry -->
+  <node pkg="nxt_controllers" type="base_odometry.py" name="base_odometry" output="screen"/>
+
+  <!-- tf correction -->
+  <node pkg="nxt_follow_mote" type="tf_correction.py" name="tf_correction" output="screen"/>
+
+  <node pkg="rviz" type="rviz" name="rviz" />
+
+  <!-- fixed transforms for anchor nodes positions -->
+  <node pkg="tf" type="static_transform_publisher" name="anchor_node1_tf_publisher" args="$(arg nwx) $(arg nwy) 0 0 0 0 world node1 1000"/>
+  <node pkg="tf" type="static_transform_publisher" name="anchor_node2_tf_publisher" args="$(arg swx) $(arg swy) 0 0 0 0 world node2 1000"/>
+  <node pkg="tf" type="static_transform_publisher" name="anchor_node3_tf_publisher" args="$(arg sex) $(arg sey) 0 0 0 0 world node3 1000"/>
+  <node pkg="tf" type="static_transform_publisher" name="anchor_node4_tf_publisher" args="$(arg nex) $(arg ney) 0 0 0 0 world node4 1000"/>
+
+  <!-- nxt goal subscriber and cmd_vel publisher -->
+  <node pkg="nxt_follow_mote" type="nxt_control_pose_subscriber.py" name="nxt_control" output="screen" respawn="true" />
+
+  <!-- Node to read serial port and publish position of mobile mote (carried by person) -->
+  <node pkg="nxt_follow_mote" type="mobile_node_pose_broadcaster.py" name="mobile_node_pose_broadcaster" args="-comm serial@/dev/ttyUSB0:115200" output="screen" /> 
+</launch>
